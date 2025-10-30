@@ -44,9 +44,6 @@ results in at least 2 processes per connection.
 
 This is full of them.
 
-The main item left is the channel files aren't cleaned when users quit, so
-after a while things get quite messy.
-
 ## Security 🔐 🚨
 
 I suspect this has some hilarious security holes. You could put stunnel in

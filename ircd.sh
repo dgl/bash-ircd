@@ -8,7 +8,7 @@
 # Credit to https://github.com/bahamas10/bash-web-server for ideas,
 # see also https://youtu.be/L967hYylZuc
 
-set -euo pipefail
+set -euoo pipefail noclobber
 shopt -s extglob nocasematch
 
 PORT=6667
@@ -201,9 +201,21 @@ send-quit() {
   local msg="${1:-}"
   local -A tosend
   for channel in ${channels[@]}; do
+    # noclobber needed, acts as lockfile
+    local write=1
+    echo -n > .channel-$channel || write=0
     for n in $(<channel-$channel); do
+      # filter out other users who have gone away
+      [[ -p "user-$n" ]] || continue
       tosend["$n"]=1
+      # filter out this user
+      [[ $n = $nick ]] && continue
+      [[ $write = 1 ]] && echo $n >> .channel-$channel
     done
+    if [[ $write = 1 ]]; then
+      echo "$(<.channel-$channel)" >| channel-$channel
+      rm .channel-$channel
+    fi
   done
   for n in ${!tosend[@]}; do
     send-to-user "$n" "QUIT :$msg"
