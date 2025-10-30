@@ -36,6 +36,10 @@ hits a timeout, it exits, as the client should have sent a ping back already.
 Channels are a nickname per line and are simply expanded when needing to send
 to them.
 
+Unlike the original IRC server software, which used non-blocking I/O so it
+could efficiently support many clients in a single process, this architecture
+results in at least 2 processes per connection.
+
 ## Bugs 🐛
 
 This is full of them.
