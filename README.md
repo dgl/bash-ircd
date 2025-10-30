@@ -36,6 +36,13 @@ hits a timeout, it exits, as the client should have sent a ping back already.
 Channels are a nickname per line and are simply expanded when needing to send
 to them.
 
+## Bugs 🐛
+
+This is full of them.
+
+The main item left is the channel files aren't cleaned when users quit, so
+after a while things get quite messy.
+
 ## Security 🔐 🚨
 
 I suspect this has some hilarious security holes. You could put stunnel in
