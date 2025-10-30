@@ -155,9 +155,13 @@ commands-on() {
         fi
 	channels[${#channels[@]}]=$chan
 	echo "$nick" >> "channel-$chan"
+        local users=""
         for n in $(<channel-$chan); do
           send-to-user "$n" "JOIN $chan"
+          users="${users} $n"
         done
+        reply-numeric 353 "= $chan :${users# }"
+        reply-numeric 366 "$chan :End of /NAMES list"
     ;;
     PRIVMSG)
       if [[ ${args/ } = $args ]]; then
@@ -192,9 +196,12 @@ commands-on() {
 
 send-to-user() {
   local user="$1"
-  local msg="$2"
-  [ ! -p "user-$user" ] && return
-  echo ":$nick!user@host $msg" >> "user-$user"
+  local line=":$nick!user@host $2"
+  if [[ $user = $nick ]]; then
+    echo "$line"
+  elif [ -p "user-$user" ]; then
+    echo "$line" >> "user-$user"
+  fi
 }
 
 send-quit() {
