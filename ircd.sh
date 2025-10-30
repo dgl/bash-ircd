@@ -92,11 +92,7 @@ commands-new() {
   local command="$1"
   local args="$2"
   case $command in
-    QUIT)
-      send-quit "${args#@(:)}"
-      channels=()
-      exit 0
-    ;;
+    QUIT) exit 0;;
     NICK)
       [[ -n $nick ]] && return
       arg="${args#@(:)}"
@@ -133,7 +129,11 @@ commands-on() {
     PING)
       echo ":${SERVER} PONG ${SERVER} $args"
     ;;
-    QUIT) exit 1;;
+    QUIT)
+      send-quit "${args#@(:)}"
+      channels=()
+      exit 0
+    ;;
     NICK) ;; # cannot change nick once connected
     JOIN)
         local chan="${args%% *}"
@@ -199,7 +199,7 @@ send-quit() {
     done
   done
   for n in ${!tosend[@]}; do
-    echo ":$nick!user@host QUIT :$msg"
+    echo ":$nick!user@host QUIT :$msg" >> "user-$n"
   done
 }
 
