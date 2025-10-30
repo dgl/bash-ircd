@@ -7,7 +7,9 @@ using some loadable builtins.
 <img src="screen.png">
 
 Credit to [YSAP](https://www.youtube.com/@yousuckatprogramming) for
-[bash-web-server](https://github.com/bahamas10/bash-web-server).
+[bash-web-server](https://github.com/bahamas10/bash-web-server). Inspiration
+from [example.fi's IRCd service](https://example.fi/blog/ircd.html), which
+unfortunately hasn't published the code behind it.
 
 ## Running
 
