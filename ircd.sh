@@ -156,7 +156,7 @@ commands-on() {
 	channels[${#channels[@]}]=$chan
 	echo "$nick" >> "channel-$chan"
         for n in $(<channel-$chan); do
-          echo ":$nick!user@host JOIN $chan" >> "user-$n"
+          send-to-user "$n" "JOIN $chan"
         done
     ;;
     PRIVMSG)
@@ -174,7 +174,7 @@ commands-on() {
         fi
         for n in $(<channel-$to); do
           if [[ $n != $nick ]]; then
-	    echo ":$nick!user@host PRIVMSG $to :$msg" >> "user-$n"
+            send-to-user "$n" "PRIVMSG $to :$msg"
           fi
         done
       else
@@ -183,11 +183,18 @@ commands-on() {
 	  reply-numeric 401 ":No such nick/channel"
 	  return
 	fi
-	echo ":${nick}!user@host PRIVMSG $to :${msg}" >> user-$to
+        send-to-user "$to" "PRIVMSG $to :${msg}"
       fi
     ;;
     *) reply-numeric 421 "${command} :Unknown command";;
   esac
+}
+
+send-to-user() {
+  local user="$1"
+  local msg="$2"
+  [ ! -p "user-$user" ] && return
+  echo ":$nick!user@host $msg" >> "user-$user"
 }
 
 send-quit() {
@@ -199,7 +206,7 @@ send-quit() {
     done
   done
   for n in ${!tosend[@]}; do
-    echo ":$nick!user@host QUIT :$msg" >> "user-$n"
+    send-to-user "$n" "QUIT :$msg"
   done
 }
 
