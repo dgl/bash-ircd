@@ -52,4 +52,4 @@ front of it to make it do TLS, but that's like putting lipstick on a pig.
 ## Contributing 🧑‍💻
 
 PRs welcome. This so far has been written without any AI, please disclose any
-usage.
+usage. I or others might be in ##bash-ircd on Libera.
