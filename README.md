@@ -20,6 +20,40 @@ unfortunately hasn't published the code behind it.
 Connect to localhost:6667 with an IRC client. If using Irssi you need to use
 `/connect -nocap localhost`.
 
+## Try it
+
+Try it now by connecting to [irc.st:6697](irc://irc.st/#bash) channel #bash (the TLS is done outside of bash by a proxy).
+
+<details>
+<summary>Example of raw IRC session...</summary>
+
+```cli
+$ telnet irc.st 6667
+Connected to irc.st.
+Escape character is '^]'.
+NICK test
+USER test test test test
+:irc.st 001 test :Welcome to IRC, test!
+:irc.st 002 test :Your host is irc.st on bash-ircd v0.0.1, bash 5.3.3(1)-release
+:irc.st 004 test irc.st 0.0.1 i o o
+:irc.st 375 test :- irc.st Message of the Day
+:irc.st 372 test :- Welcome to a pure Bash IRCd!
+:irc.st 372 test :-
+:irc.st 372 test :- For more details see https://dgl.cx/bash-ircd
+:irc.st 372 test :-
+:irc.st 372 test :- Be excellent to each other 😇
+:irc.st 376 test :End of /MOTD command.
+JOIN #bash
+:test!user@host JOIN #bash
+:irc.st 353 test = #bash :dgl dg test
+:irc.st 366 test #bash :End of /NAMES list
+:irc.st 329 test #bash 1761878952
+:irc.st 332 test #bash :bash?
+:irc.st 333 test #bash dg 0
+```
+
+</details>
+
 ## Architecture 🏗️
 
 The `accept` loadable bash builtin makes it possible to listen on a socket. See
@@ -71,4 +105,4 @@ front of it to make it do TLS, but that's like putting lipstick on a pig.
 ## Contributing 🧑‍💻
 
 PRs welcome. This so far has been written without any AI, please disclose any
-usage. I or others might be in ##bash-ircd on Libera.
+usage.
