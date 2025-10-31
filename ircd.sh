@@ -139,7 +139,7 @@ commands-on() {
         local chan="${args%% *}"
         chan="$(lower "${chan#@(:)}")"
         # TODO: IFS=, and do each channel if join is a list.
-	local chan_validated="${chan/@([^#a-z0-9_-])}"
+        local chan_validated="${chan/@([^#a-z0-9_-])}"
         if [[ $chan != $chan_validated ]]; then
           reply-numeric 479 "$chan :Illegal channel name"
           return
@@ -153,8 +153,8 @@ commands-on() {
         if [[ $n > 10 ]]; then
           return
         fi
-	channels[${#channels[@]}]=$chan
-	echo "$nick" >> "channel-$chan"
+        channels[${#channels[@]}]=$chan
+        echo "$nick" >> "channel-$chan"
         local users=""
         for n in $(<channel-$chan); do
           send-to-user "$n" "JOIN $chan"
@@ -171,10 +171,10 @@ commands-on() {
       local to="$(lower "${args%% *}")"
       local msg="${args##+([^ ]) *(:)}"
       if [[ ${to:0:1} = "#" ]]; then
-	local to_validated="${to/@([^#a-z0-9_-])}"
-	if [[ $to != $to_validated ]] || [ ! -f "channel-$to" ]; then
-	  reply-numeric 401 ":No such nick/channel"
-	  return
+        local to_validated="${to/@([^#a-z0-9_-])}"
+        if [[ $to != $to_validated ]] || [ ! -f "channel-$to" ]; then
+          reply-numeric 401 ":No such nick/channel"
+          return
         fi
         for n in $(<channel-$to); do
           if [[ $n != $nick ]]; then
@@ -182,11 +182,11 @@ commands-on() {
           fi
         done
       else
-	local to_validated="${to/@([^a-z0-9_-])}"
-	if [[ $to != $to_validated ]] || [ ! -p "user-$to" ]; then
-	  reply-numeric 401 ":No such nick/channel"
-	  return
-	fi
+        local to_validated="${to/@([^a-z0-9_-])}"
+        if [[ $to != $to_validated ]] || [ ! -p "user-$to" ]; then
+          reply-numeric 401 ":No such nick/channel"
+          return
+        fi
         send-to-user "$to" "PRIVMSG $to :${msg}"
       fi
     ;;
