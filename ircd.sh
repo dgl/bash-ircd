@@ -70,6 +70,7 @@ maybe-connect() {
   reply-numeric "001" ":Welcome to IRC, ${nick}!"
   reply-numeric "002" ":Your host is ${SERVER} on bash-ircd v0.0.1, bash ${BASH_VERSION}"
   reply-numeric "004" "${SERVER} 0.0.1 i o o"
+  commands-${state} MOTD
   watcher&
   WPID=$!
   trap 'send-quit; kill $WPID; rm -f "user-$nick"' EXIT
@@ -125,7 +126,7 @@ commands-new() {
 # Commands for registered connections, $nick is valid.
 commands-on() {
   local command="$1"
-  local args="$2"
+  local args="${2:-}"
   case $command in
     PONG) ;;
     PING)
@@ -135,6 +136,15 @@ commands-on() {
       send-quit "${args#:}"
       channels=()
       exit 0
+    ;;
+    MOTD)
+      reply-numeric "375" ":- ${SERVER} Message of the Day"
+      if [ -f "motd" ]; then
+        while IFS= read -r line; do
+          reply-numeric 372 ":- $line"
+        done <motd
+      fi
+      reply-numeric 376 ":End of /MOTD command."
     ;;
     NICK) ;; # cannot change nick once connected
     JOIN)
