@@ -28,7 +28,7 @@ need_loadables() {
 # The loadable bash builtins needed:
 enable accept || need_loadables
 enable mkfifo || need_loadables
-enable rm || need_loadables
+enable rm     || need_loadables
 
 nick=
 user=
@@ -36,18 +36,34 @@ state=new
 declare -a channels=()
 
 process-client() {
-  local line command
+  local line last=$SECONDS
 
   # stdin is stdout too, because it's a socket
   exec >&0
 
-  while IFS=$'\n' read -t120 -r line; do
-    line="${line//$'\r'}"
-    # Enforce IRC line length limit
-    line="${line:0:512}"
-    # Clients can't send prefixes, strip them
-    line="${line#:+([^ ]) }"
-    commands-$state "${line%% *}" "${line##+([^ ])*( )}"
+  while true; do
+    # Not pretty, need to tell the difference between exit 1 from read (EOF)
+    # and signalled due to timeout.
+    local rc=0
+    while IFS=$'\n' read -t 90 -r line; rc=$?; do
+      [[ $rc -gt 0 ]] && break
+      last=$SECONDS
+      line="${line//$'\r'}"
+      # Enforce IRC line length limit
+      line="${line:0:512}"
+      # Clients can't send prefixes, strip them
+      line="${line#:+([^ ]) }"
+      commands-$state "${line%% *}" "${line##+([^ ])*( )}"
+    done
+    [[ $rc -eq 1 ]] && break # EOF
+    if [[ $rc -ge 128 ]]; then
+      local active=$((SECONDS-last))
+      if [ $active -ge 180 ]; then
+        break # Ping timeout
+      elif [ $active -ge 90 ]; then
+        echo "PING :${SERVER}"$'\r'
+      fi
+    fi
   done
 }
 
@@ -100,16 +116,11 @@ maybe-connect() {
 }
 
 watcher() {
-  local last=$SECONDS
   while true; do
     exec <"user-$nick"
-    while IFS=$'\n' read -t90 -r line; do
+    while IFS=$'\n' read -r line; do
       echo "$line"
     done
-    if [ $((SECONDS-last)) -ge 90 ]; then
-      echo "PING :${SERVER}"$'\r'
-      last=$SECONDS
-    fi
   done
 }
 
@@ -124,7 +135,6 @@ commands-on() {
     ;;
     QUIT)
       send-quit "${args#:}"
-      channels=()
       exit 0
     ;;
     MOTD)
@@ -155,7 +165,7 @@ commands-on() {
           n=$((n+1))
         done
         if [[ $n -gt 10 ]]; then
-          # TODO: Too many channels
+          reply-numeric 403 "$chan :You have joined too many channels"
           return
         fi
         channels[${#channels[@]}]=$chan
@@ -303,6 +313,7 @@ send-quit() {
   for n in "${!tosend[@]}"; do
     send-to-user "$n" "QUIT :$msg"
   done
+  channels=()
 }
 
 while true; do

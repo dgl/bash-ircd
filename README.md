@@ -66,9 +66,6 @@ process ("watcher") that reads from that FIFO and writes to the client is
 started, this means other clients can directly write to the FIFO, which in turn
 directly writes to the user's connection.
 
-Watcher also is responsible for sending PINGs, which means if process-client
-hits a timeout, it exits, as the client should have sent a ping back already.
-
 Channels are plain text files with a nickname per line and are simply expanded
 by process-client running as the sending user when needing to send to them.
 
