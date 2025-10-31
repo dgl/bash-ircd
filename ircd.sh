@@ -47,7 +47,9 @@ process-client() {
 
   while IFS=$'\n' read -t120 -r line; do
     line="${line//$'\r'}"
-    # Clients can't send prefixes
+    # Enforce IRC line length limit
+    line="${line:0:512}"
+    # Clients can't send prefixes, strip them
     line="${line#:+([^ ]) }"
     commands-$state "${line%% *}" "${line##+([^ ])*( )}"
   done
@@ -81,7 +83,7 @@ watcher() {
       echo "$line"
     done
     if [ $((SECONDS-last)) -ge 90 ]; then
-      echo "PING :${SERVER}"
+      echo "PING :${SERVER}"$'\r'
       last=$SECONDS
     fi
   done
@@ -127,7 +129,7 @@ commands-on() {
   case $command in
     PONG) ;;
     PING)
-      echo ":${SERVER} PONG ${SERVER} $args"
+      echo ":${SERVER} PONG ${SERVER} $args"$'\r'
     ;;
     QUIT)
       send-quit "${args#:}"
@@ -157,6 +159,15 @@ commands-on() {
           return
         fi
         channels[${#channels[@]}]=$chan
+        if [ ! -f "meta-$chan" ]; then
+          # Can lose race here, fine.
+          if echo "$EPOCHSECONDS" > "meta-$chan"; then
+            # Empty topic and set by
+            echo "" >> "meta-$chan"
+            echo "" >> "meta-$chan"
+            echo "0" >> "meta-$chan"
+          fi
+        fi
         echo "$nick" >> "channel-$chan"
         local users=""
         for n in $(<"channel-$chan"); do
@@ -165,6 +176,16 @@ commands-on() {
         done
         reply-numeric 353 "= $chan :${users# }"
         reply-numeric 366 "$chan :End of /NAMES list"
+        local ts topic setby when
+        exec 3<"meta-$chan"
+        read ts <&3 && reply-numeric 329 "$chan $ts"
+        if IFS= read topic <&3 && [[ -n "$topic" ]]; then
+          reply-numeric 332 "$chan :$topic"
+          read setby <&3 || :
+          read when <&3 || :
+          reply-numeric 333 "$chan $setby $when"
+        fi
+        exec 3>&-
       done
     ;;
     PRIVMSG|NOTICE)
@@ -195,13 +216,45 @@ commands-on() {
         send-to-user "$to" "$command $to :${msg}"
       fi
     ;;
+    TOPIC)
+      local chan topic
+      chan="$(lower "${args%% *}")"
+      topic="${args##+([^ ]) *(:)}"
+      if [[ ${chan:0:1} != "#" ]]; then
+        reply-numeric 403 ":No such channel"
+        return
+      fi
+      local chan_valid="${chan/@([^#a-z0-9_-])}"
+      local file="meta-$chan"
+      if [[ $chan != "$chan_valid" ]] || [ ! -f "$file" ]; then
+        reply-numeric 403 ":No such channel"
+        return
+      fi
+      local ts
+      exec 3<"$file"
+      read ts <&3
+      exec 3>&-
+      # noclobber needed, acts as lockfile
+      local write=1
+      echo "$ts" > ".$file" || write=0
+      if [[ $write = 1 ]]; then
+        echo "$topic" >> ".$file"
+        echo "$nick" >> ".$file"
+        echo "$EPOCHSECONDS" >> ".$file"
+        echo "$(<".$file")" >| "$file"
+        rm ".$file"
+        for n in $(<"channel-$chan"); do
+          send-to-user "$n" "TOPIC $chan :$topic"
+        done
+      fi
+    ;;
     *) reply-numeric 421 "${command} :Unknown command";;
   esac
 }
 
 send-to-user() {
   local user="$1"
-  local line=":$nick!user@host $2"
+  local line=":$nick!user@host $2"$'\r'
   if [[ $user = "$nick" ]]; then
     echo "$line"
   elif [ -p "user-$user" ]; then
