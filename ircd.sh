@@ -45,7 +45,7 @@ process-client() {
   # stdin is stdout too, because it's a socket
   exec >&0
 
-  while IFS= read -t120 -r line; do
+  while IFS=$'\n' read -t120 -r line; do
     line="${line//$'\r'}"
     # Clients can't send prefixes
     line="${line#:+([^ ]) }"
@@ -66,7 +66,7 @@ maybe-connect() {
   [[ -z $nick ]] && return
   state=on
   reply-numeric "001" ":Welcome to IRC, ${nick}!"
-  reply-numeric "002" ":Your host is ${SERVER} on bash ircd v0.0.1, bash ${BASH_VERSION}"
+  reply-numeric "002" ":Your host is ${SERVER} on bash-ircd v0.0.1, bash ${BASH_VERSION}"
   reply-numeric "004" "${SERVER} 0.0.1 i o o"
   watcher&
   WPID=$!
@@ -77,7 +77,7 @@ watcher() {
   local last=$SECONDS
   while true; do
     exec <"user-$nick"
-    while IFS= read -t90 -r line; do
+    while IFS=$'\n' read -t90 -r line; do
       echo "$line"
     done
     if [ $((SECONDS-last)) -ge 90 ]; then
@@ -130,15 +130,17 @@ commands-on() {
       echo ":${SERVER} PONG ${SERVER} $args"
     ;;
     QUIT)
-      send-quit "${args#@(:)}"
+      send-quit "${args#:}"
       channels=()
       exit 0
     ;;
     NICK) ;; # cannot change nick once connected
     JOIN)
-        local chan="${args%% *}"
-        chan="$(lower "${chan#@(:)}")"
-        # TODO: IFS=, and do each channel if join is a list.
+      local arg="${args%% *}"
+      arg="$(lower "${arg#:}")"
+      while [[ -n "$arg" ]]; do
+        local chan="${arg%%,*}"
+        arg="${arg##+([^,])?(,)}"
         local chan_validated="${chan/@([^#a-z0-9_-])}"
         if [[ $chan != "$chan_validated" ]]; then
           reply-numeric 479 "$chan :Illegal channel name"
@@ -151,6 +153,7 @@ commands-on() {
           n=$((n+1))
         done
         if [[ $n -gt 10 ]]; then
+          # TODO: Too many channels
           return
         fi
         channels[${#channels[@]}]=$chan
@@ -162,8 +165,9 @@ commands-on() {
         done
         reply-numeric 353 "= $chan :${users# }"
         reply-numeric 366 "$chan :End of /NAMES list"
+      done
     ;;
-    PRIVMSG)
+    PRIVMSG|NOTICE)
       if [[ ${args/ } = "$args" ]]; then
         reply-numeric 412 ":No text to send"
         return
@@ -179,7 +183,7 @@ commands-on() {
         fi
         for n in $(<"channel-$to"); do
           if [[ $n != "$nick" ]]; then
-            send-to-user "$n" "PRIVMSG $to :$msg"
+            send-to-user "$n" "$command $to :$msg"
           fi
         done
       else
@@ -188,7 +192,7 @@ commands-on() {
           reply-numeric 401 ":No such nick/channel"
           return
         fi
-        send-to-user "$to" "PRIVMSG $to :${msg}"
+        send-to-user "$to" "$command $to :${msg}"
       fi
     ;;
     *) reply-numeric 421 "${command} :Unknown command";;
