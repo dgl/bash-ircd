@@ -34,11 +34,6 @@ user=
 state=new
 declare -a channels=()
 
-lower() {
-  # Usage: lower "string"
-  printf '%s\n' "${1,,}"
-}
-
 process-client() {
   local line command
 
@@ -52,41 +47,6 @@ process-client() {
     # Clients can't send prefixes, strip them
     line="${line#:+([^ ]) }"
     commands-$state "${line%% *}" "${line##+([^ ])*( )}"
-  done
-}
-
-WPID=
-
-reply-numeric() {
-  local numeric=$1
-  local msg=$2
-  echo ":${SERVER} $numeric ${nick:-*} $msg"$'\r'
-}
-
-maybe-connect() {
-  [[ -z $user ]] && return
-  [[ -z $nick ]] && return
-  state=on
-  reply-numeric "001" ":Welcome to IRC, ${nick}!"
-  reply-numeric "002" ":Your host is ${SERVER} on bash-ircd v0.0.1, bash ${BASH_VERSION}"
-  reply-numeric "004" "${SERVER} 0.0.1 i o o"
-  commands-${state} MOTD
-  watcher&
-  WPID=$!
-  trap 'send-quit; kill $WPID; rm -f "user-$nick"' EXIT
-}
-
-watcher() {
-  local last=$SECONDS
-  while true; do
-    exec <"user-$nick"
-    while IFS=$'\n' read -t90 -r line; do
-      echo "$line"
-    done
-    if [ $((SECONDS-last)) -ge 90 ]; then
-      echo "PING :${SERVER}"$'\r'
-      last=$SECONDS
-    fi
   done
 }
 
@@ -121,6 +81,35 @@ commands-new() {
     ;;
     *) reply-numeric 421 "${command} :Unknown command";;
   esac
+}
+
+WPID=
+
+maybe-connect() {
+  [[ -z $user ]] && return
+  [[ -z $nick ]] && return
+  state=on
+  reply-numeric "001" ":Welcome to IRC, ${nick}!"
+  reply-numeric "002" ":Your host is ${SERVER} on bash-ircd v0.0.1, bash ${BASH_VERSION}"
+  reply-numeric "004" "${SERVER} 0.0.1 i o o"
+  commands-${state} MOTD
+  watcher&
+  WPID=$!
+  trap 'send-quit; kill $WPID; rm -f "user-$nick"' EXIT
+}
+
+watcher() {
+  local last=$SECONDS
+  while true; do
+    exec <"user-$nick"
+    while IFS=$'\n' read -t90 -r line; do
+      echo "$line"
+    done
+    if [ $((SECONDS-last)) -ge 90 ]; then
+      echo "PING :${SERVER}"$'\r'
+      last=$SECONDS
+    fi
+  done
 }
 
 # Commands for registered connections, $nick is valid.
@@ -266,6 +255,17 @@ commands-on() {
     MODE) ;;
     *) reply-numeric 421 "${command} :Unknown command";;
   esac
+}
+
+lower() {
+  # Usage: lower "string"
+  printf '%s\n' "${1,,}"
+}
+
+reply-numeric() {
+  local numeric=$1
+  local msg=$2
+  echo ":${SERVER} $numeric ${nick:-*} $msg"$'\r'
 }
 
 send-to-user() {
