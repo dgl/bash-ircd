@@ -11,9 +11,9 @@
 set -euoo pipefail noclobber
 shopt -s extglob nocasematch
 
-PORT=6667
-ADDRESS=127.0.0.1
-SERVER=irc.example.com
+PORT="${PORT:-6667}"
+ADDRESS="${ADDRESS:-127.0.0.1}"
+SERVER="${SERVER:-irc.example.com}"
 
 # Ensure we stay pure:
 readonly PATH=""
@@ -141,8 +141,8 @@ commands-on() {
       while [[ -n "$arg" ]]; do
         local chan="${arg%%,*}"
         arg="${arg##+([^,])?(,)}"
-        local chan_validated="${chan/@([^#a-z0-9_-])}"
-        if [[ $chan != "$chan_validated" ]]; then
+        local chan_valid="${chan/@([^#a-z0-9_-])}"
+        if [[ ${chan_valid:0:1} != "#" || $chan != "$chan_valid" ]]; then
           reply-numeric 479 "$chan :Illegal channel name"
           return
         fi
