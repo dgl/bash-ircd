@@ -144,7 +144,7 @@ commands-on() {
           reply-numeric 372 ":- $line"
         done <motd
       fi
-      reply-numeric 376 ":End of /MOTD command."
+      reply-numeric 376 ":End of /MOTD command"
     ;;
     NICK) ;; # cannot change nick once connected
     JOIN)
@@ -173,9 +173,11 @@ commands-on() {
           # Can lose race here, fine.
           if echo "$EPOCHSECONDS" > "meta-$chan"; then
             # Empty topic and set by
-            echo "" >> "meta-$chan"
-            echo "" >> "meta-$chan"
-            echo "0" >> "meta-$chan"
+            {
+              echo ""
+              echo ""
+              echo "0"
+            } >> "meta-$chan"
           fi
         fi
         echo "$nick" >> "channel-$chan"
@@ -188,11 +190,11 @@ commands-on() {
         reply-numeric 366 "$chan :End of /NAMES list"
         local ts topic setby when
         exec 3<"meta-$chan"
-        read ts <&3 && reply-numeric 329 "$chan $ts"
-        if IFS= read topic <&3 && [[ -n "$topic" ]]; then
+        read -r ts <&3 && reply-numeric 329 "$chan $ts"
+        if IFS= read -r topic <&3 && [[ -n "$topic" ]]; then
           reply-numeric 332 "$chan :$topic"
-          read setby <&3 || :
-          read when <&3 || :
+          read -r setby <&3 || :
+          read -r when <&3 || :
           reply-numeric 333 "$chan $setby $when"
         fi
         exec 3>&-
@@ -209,7 +211,7 @@ commands-on() {
       if [[ ${to:0:1} = "#" ]]; then
         local to_validated="${to/@([^#a-z0-9_-])}"
         if [[ $to != "$to_validated" ]] || [ ! -f "channel-$to" ]; then
-          reply-numeric 401 ":No such nick/channel"
+          reply-numeric 401 "$to :No such nick/channel"
           return
         fi
         for n in $(<"channel-$to"); do
@@ -220,7 +222,7 @@ commands-on() {
       else
         local to_validated="${to/@([^a-z0-9_-])}"
         if [[ $to != "$to_validated" ]] || [ ! -p "user-$to" ]; then
-          reply-numeric 401 ":No such nick/channel"
+          reply-numeric 401 "$to :No such nick/channel"
           return
         fi
         send-to-user "$to" "$command $to :${msg}"
@@ -242,15 +244,17 @@ commands-on() {
       fi
       local ts
       exec 3<"$file"
-      read ts <&3
+      read -r ts <&3
       exec 3>&-
       # noclobber needed, acts as lockfile
       local write=1
       echo "$ts" > ".$file" || write=0
       if [[ $write = 1 ]]; then
-        echo "$topic" >> ".$file"
-        echo "$nick" >> ".$file"
-        echo "$EPOCHSECONDS" >> ".$file"
+        {
+          echo "$topic"
+          echo "$nick"
+          echo "$EPOCHSECONDS"
+        } >> ".$file"
         echo "$(<".$file")" >| "$file"
         rm ".$file"
         for n in $(<"channel-$chan"); do
@@ -258,6 +262,8 @@ commands-on() {
         done
       fi
     ;;
+    WHO) ;; # Ignore for now, avoids floods of errors in clients
+    MODE) ;;
     *) reply-numeric 421 "${command} :Unknown command";;
   esac
 }
