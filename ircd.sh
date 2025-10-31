@@ -45,7 +45,7 @@ process-client() {
   # stdin is stdout too, because it's a socket
   exec >&0
 
-  while read -t120 -r line; do
+  while IFS= read -t120 -r line; do
     line="${line//$'\r'}"
     # Clients can't send prefixes
     line="${line#:+([^ ]) }"
@@ -77,7 +77,7 @@ watcher() {
   local last=$SECONDS
   while true; do
     exec <"user-$nick"
-    while read -t90 -r line; do
+    while IFS= read -t90 -r line; do
       echo "$line"
     done
     if [ $[SECONDS-last] -ge 90 ]; then
