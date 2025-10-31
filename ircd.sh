@@ -80,7 +80,7 @@ watcher() {
     while IFS= read -t90 -r line; do
       echo "$line"
     done
-    if [ $[SECONDS-last] -ge 90 ]; then
+    if [ $((SECONDS-last)) -ge 90 ]; then
       echo "PING :${SERVER}"
       last=$SECONDS
     fi
@@ -98,7 +98,7 @@ commands-new() {
       arg="${args#@(:)}"
       # Stricter than RFC, but avoids issues with shell metacharacters.
       local arg_validated="${args/@([^a-z0-9_])}"
-      if [[ $arg != $arg_validated ]]; then
+      if [[ $arg != "$arg_validated" ]]; then
         reply-numeric "432" "$arg :Erroneous Nickname"
         return
       fi
@@ -140,23 +140,23 @@ commands-on() {
         chan="$(lower "${chan#@(:)}")"
         # TODO: IFS=, and do each channel if join is a list.
         local chan_validated="${chan/@([^#a-z0-9_-])}"
-        if [[ $chan != $chan_validated ]]; then
+        if [[ $chan != "$chan_validated" ]]; then
           reply-numeric 479 "$chan :Illegal channel name"
           return
         fi
         # already in it?
         local n=0
-        for channel in ${channels[@]}; do
-          [[ $channel = $chan ]] && return
-          n=$[n+1]
+        for channel in "${channels[@]}"; do
+          [[ $channel = "$chan" ]] && return
+          n=$((n+1))
         done
-        if [[ $n > 10 ]]; then
+        if [[ $n -gt 10 ]]; then
           return
         fi
         channels[${#channels[@]}]=$chan
         echo "$nick" >> "channel-$chan"
         local users=""
-        for n in $(<channel-$chan); do
+        for n in $(<"channel-$chan"); do
           send-to-user "$n" "JOIN $chan"
           users="${users} $n"
         done
@@ -164,26 +164,27 @@ commands-on() {
         reply-numeric 366 "$chan :End of /NAMES list"
     ;;
     PRIVMSG)
-      if [[ ${args/ } = $args ]]; then
+      if [[ ${args/ } = "$args" ]]; then
         reply-numeric 412 ":No text to send"
         return
       fi
-      local to="$(lower "${args%% *}")"
-      local msg="${args##+([^ ]) *(:)}"
+      local to msg
+      to="$(lower "${args%% *}")"
+      msg="${args##+([^ ]) *(:)}"
       if [[ ${to:0:1} = "#" ]]; then
         local to_validated="${to/@([^#a-z0-9_-])}"
-        if [[ $to != $to_validated ]] || [ ! -f "channel-$to" ]; then
+        if [[ $to != "$to_validated" ]] || [ ! -f "channel-$to" ]; then
           reply-numeric 401 ":No such nick/channel"
           return
         fi
-        for n in $(<channel-$to); do
-          if [[ $n != $nick ]]; then
+        for n in $(<"channel-$to"); do
+          if [[ $n != "$nick" ]]; then
             send-to-user "$n" "PRIVMSG $to :$msg"
           fi
         done
       else
         local to_validated="${to/@([^a-z0-9_-])}"
-        if [[ $to != $to_validated ]] || [ ! -p "user-$to" ]; then
+        if [[ $to != "$to_validated" ]] || [ ! -p "user-$to" ]; then
           reply-numeric 401 ":No such nick/channel"
           return
         fi
@@ -197,7 +198,7 @@ commands-on() {
 send-to-user() {
   local user="$1"
   local line=":$nick!user@host $2"
-  if [[ $user = $nick ]]; then
+  if [[ $user = "$nick" ]]; then
     echo "$line"
   elif [ -p "user-$user" ]; then
     echo "$line" >> "user-$user"
@@ -207,31 +208,32 @@ send-to-user() {
 send-quit() {
   local msg="${1:-}"
   local -A tosend
-  for channel in ${channels[@]}; do
+  for channel in "${channels[@]}"; do
     # noclobber needed, acts as lockfile
     local write=1
-    echo -n > .channel-$channel || write=0
-    for n in $(<channel-$channel); do
+    local file="channel-$channel"
+    echo -n > ".$file" || write=0
+    for n in $(<"$file"); do
       # filter out other users who have gone away
       [[ -p "user-$n" ]] || continue
       tosend["$n"]=1
       # filter out this user
-      [[ $n = $nick ]] && continue
-      [[ $write = 1 ]] && echo $n >> .channel-$channel
+      [[ $n = "$nick" ]] && continue
+      [[ $write = 1 ]] && echo "$n" >> ".$file"
     done
     if [[ $write = 1 ]]; then
-      echo "$(<.channel-$channel)" >| channel-$channel
-      rm .channel-$channel
+      echo "$(<".$file")" >| "$file"
+      rm ".$file"
     fi
   done
-  for n in ${!tosend[@]}; do
+  for n in "${!tosend[@]}"; do
     send-to-user "$n" "QUIT :$msg"
   done
 }
 
 while true; do
   accept -b "$ADDRESS" -v fd -r ip "$PORT"
-  process-client <&"$fd" &
+  process-client <&"${fd:?}" &
   # close in parent
   exec {fd}>&-
 done
