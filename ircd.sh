@@ -4,6 +4,7 @@
 #
 # "Pure"(*) bash IRCd -- https://dgl.cx/bash-ircd
 # *: Uses various loadable bash builtins
+readonly VERSION="0.0.2"
 #
 # Credit to https://github.com/bahamas10/bash-web-server for ideas,
 # see also https://youtu.be/L967hYylZuc
@@ -90,8 +91,8 @@ maybe-connect() {
   [[ -z $nick ]] && return
   state=on
   reply-numeric "001" ":Welcome to IRC, ${nick}!"
-  reply-numeric "002" ":Your host is ${SERVER} on bash-ircd v0.0.1, bash ${BASH_VERSION}"
-  reply-numeric "004" "${SERVER} 0.0.1 i o o"
+  reply-numeric "002" ":Your host is ${SERVER} on bash-ircd ${VERSION}, bash ${BASH_VERSION}"
+  reply-numeric "004" "${SERVER} ${VERSION} i o o"
   commands-${state} MOTD
   watcher&
   WPID=$!
