@@ -4,7 +4,7 @@
 #
 # "Pure"(*) bash IRCd -- https://dgl.cx/bash-ircd
 # *: Uses various loadable bash builtins
-readonly VERSION="0.0.2"
+readonly VERSION="0.0.3"
 #
 # Credit to https://github.com/bahamas10/bash-web-server for ideas,
 # see also https://youtu.be/L967hYylZuc
