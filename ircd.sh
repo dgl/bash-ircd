@@ -191,12 +191,7 @@ commands-on() {
         local ts topic setby when
         exec 3<"meta-$chan"
         read -r ts <&3 && reply-numeric 329 "$chan $ts"
-        if IFS= read -r topic <&3 && [[ -n "$topic" ]]; then
-          reply-numeric 332 "$chan :$topic"
-          read -r setby <&3 || :
-          read -r when <&3 || :
-          reply-numeric 333 "$chan $setby $when"
-        fi
+        send-topic "$chan" 3
         exec 3>&-
       done
     ;;
@@ -231,7 +226,7 @@ commands-on() {
     TOPIC)
       local chan topic
       chan="$(lower "${args%% *}")"
-      topic="${args##+([^ ]) *(:)}"
+      topic="${args##+([^ ])*( )}"
       if [[ ${chan:0:1} != "#" ]]; then
         reply-numeric 403 ":No such channel"
         return
@@ -245,7 +240,12 @@ commands-on() {
       local ts
       exec 3<"$file"
       read -r ts <&3
+      if [[ $topic = "" ]]; then
+        send-topic "$chan" 3
+        return
+      fi
       exec 3>&-
+      topic="${topic#:}"
       # noclobber needed, acts as lockfile
       local write=1
       echo "$ts" > ".$file" || write=0
@@ -286,6 +286,17 @@ send-to-user() {
     echo "$line"
   elif [ -p "user-$user" ]; then
     echo "$line" >> "user-$user"
+  fi
+}
+
+send-topic() {
+  local chan="${1?}"
+  local fd="${2?}"
+  if IFS= read -r topic <&${fd} && [[ -n "$topic" ]]; then
+    reply-numeric 332 "$chan :$topic"
+    read -r setby <&${fd} || :
+    read -r when <&${fd} || :
+    reply-numeric 333 "$chan $setby $when"
   fi
 }
 
